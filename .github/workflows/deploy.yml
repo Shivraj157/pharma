@@ -1,0 +1,76 @@
+name: Build and Deploy to S3
+
+on:
+
+  push:
+
+    branches: [ master ]         # deploy only on push to master
+
+  workflow_dispatch:              # allow manual runs
+
+jobs:
+
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - uses: actions/checkout@v4
+
+      - name: Upload artifact for deployment
+
+        uses: actions/upload-artifact@v4
+
+        with:
+
+          name: website-files
+
+          path: |
+
+            index.html
+
+            style.css
+
+            
+
+  deploy:
+
+    needs: build
+
+    runs-on: ubuntu-latest
+
+    # Runs only for push to master and for manual runs on master
+
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/master') || (github.event_name == 'workflow_dispatch' && startsWith(github.ref, 'refs/heads/master'))
+
+    steps:
+
+      - name: Download artifact
+
+        uses: actions/download-artifact@v4
+
+        with:
+
+          name: website-files
+
+          path: website-files
+
+      - name: Configure AWS credentials
+
+        uses: aws-actions/configure-aws-credentials@v4
+
+        with:
+
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+          aws-region: us-east-1
+
+      - name: Deploy to S3
+
+        run: |
+
+          aws s3 sync website-files/ s3://formypharmaproject --delete
+ 
